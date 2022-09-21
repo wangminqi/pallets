@@ -87,6 +87,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			shard_id: ShardIdentifier,
 			block_number: u64,
+			block_number_diff: u64,
 			block_header_hash: H256,
 		) -> DispatchResultWithPostInfo {
 			let confirmation = SidechainBlockConfirmation { block_number, block_header_hash };
@@ -118,7 +119,9 @@ pub mod pallet {
 			if block_number > Self::add_to_block_number(latest_block_number, lenience)? {
 				// Block is far too early and hence refused.
 				return Err(<Error<T>>::BlockNumberTooHigh.into())
-			} else if block_number > Self::add_to_block_number(latest_block_number, 1)? {
+			} else if block_number >
+				Self::add_to_block_number(latest_block_number, block_number_diff)?
+			{
 				// Block is too early and stored in the queue for later import.
 				if !<SidechainBlockConfirmationQueue<T>>::contains_key((shard_id, block_number)) {
 					<SidechainBlockConfirmationQueue<T>>::insert(
@@ -126,7 +129,9 @@ pub mod pallet {
 						confirmation,
 					);
 				}
-			} else if block_number == Self::add_to_block_number(latest_block_number, 1)? {
+			} else if block_number ==
+				Self::add_to_block_number(latest_block_number, block_number_diff)?
+			{
 				Self::finalize_block(shard_id, confirmation, &sender, sender_index);
 				latest_confirmation = confirmation;
 
